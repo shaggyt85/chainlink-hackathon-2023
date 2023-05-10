@@ -1,0 +1,12 @@
+.vscode
+
+aggregator/__pycache__
+aggregator/venv
+
+crowdfund/cache
+crowdfund/node_modules
+
+**/**/node_modules
+providers/amazon/node_modules
+providers/ebay/node_modules
+providers/walmart/node_modules
