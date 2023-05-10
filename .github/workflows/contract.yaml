@@ -12,7 +12,7 @@ env:
 
 defaults:
   run:
-    working-directory: backend
+    working-directory: crowdfund
 
 jobs:
   test:
@@ -24,7 +24,7 @@ jobs:
       - name: Install Node
         uses: actions/setup-node@v3
         with:
-          node-version-file: backend/.nvmrc
+          node-version-file: crowdfund/.nvmrc
 
       - name: Install
         run: |
