@@ -17,11 +17,6 @@ interface IERC20 {
 // https://github.com/aindrajaya/dapp-crowdfunding-client
 // chainlink automation -> start and finish
 contract CrowdFund is Ownable {
-    struct Donation {
-        address donator;
-        uint256 amount;
-    }
-
     struct Campaign {
         address creator;
         CampaignStatus status;
@@ -32,25 +27,9 @@ contract CrowdFund is Ownable {
         uint256 goals;
     }
 
-    enum CampaignStatus {
-        CREATED, // new
-        STARTED, // validated, can start
-        FINISHED, // finished at time, unsuccesful
-        CLAIMED, // finished at time, succesful
-        SCAM // finished before
-    }
-    enum GoalStatus {
-        PENDING,
-        BLOCKED,
-        CLAIMED,
-        PROOF,
-        VALID,
-        INVALID
-    }
-
     struct NewGoal {
-        uint256 price;
         uint256 id;
+        uint256 price;
     }
 
     struct Goal {
@@ -60,9 +39,22 @@ contract CrowdFund is Ownable {
         string proof;
     }
 
-    struct Item {
-        uint256 timestamp;
-        uint256 price;
+    enum CampaignStatus {
+        CREATED, // new
+        LOADED, // has all the items
+        STARTED, // validated, can start
+        FINISHED, // finished at time, unsuccesful
+        CLAIMED, // finished at time, succesful
+        INVALID // finished before
+    }
+    enum GoalStatus {
+        PENDING,
+        BLOCKED,
+        CLAIMED,
+        PROOF,
+        VALID,
+        INVALID,
+        REVALIDATE
     }
 
     IERC20 public immutable token;
@@ -75,13 +67,7 @@ contract CrowdFund is Ownable {
 
     mapping(address => uint256) public reputation;
 
-    event Create(
-        uint256 id,
-        address indexed creator,
-        uint256 total,
-        uint32 startAt,
-        uint32 endAt
-    );
+    event Create(address indexed creator, uint256 id);
     event Cancel(uint256 id);
     event Pledge(uint256 indexed id, address indexed caller, uint256 amount);
     event Unpledge(uint256 indexed id, address indexed caller, uint256 amount);
@@ -94,6 +80,27 @@ contract CrowdFund is Ownable {
         minVotes = _minVotes;
     }
 
+    // Modifiers
+
+    modifier campaignStarted(uint256 _id) {
+        Campaign memory campaign = campaigns[_id];
+        require(
+            campaign.status == CampaignStatus.STARTED,
+            "Campaign hasn't started yet"
+        );
+        _;
+    }
+
+    modifier campaignOwner(uint256 _id) {
+        Campaign memory campaign = campaigns[_id];
+        require(
+            campaign.creator == msg.sender,
+            "You did not create this Campaign"
+        );
+        _;
+    }
+
+    // Campaings
     function create(uint32 _goals, uint32 _startAt, uint32 _endAt) external {
         require(
             _startAt >= block.timestamp,
@@ -104,25 +111,8 @@ contract CrowdFund is Ownable {
             _endAt <= block.timestamp + maxDuration,
             "End time exceeds the maximum Duration"
         );
-        // require(_goals.length > 0, "It needs at least one goal");
 
         count += 1;
-        uint256 total = 0;
-        // for (uint256 i = 0; i < _goals.length; i++) {
-        //     Goal memory goal = Goal(
-        //         _goals[i].id,
-        //         _goals[i].price,
-        //         GoalStatus.BLOCKED,
-        //         ""
-        //     );
-
-        //     total += _goals[i].price;
-        //     // if (i == 0) {
-        //     //     goal.status = GoalStatus.PENDING;
-        //     // }
-        //     goals[count][i] = goal;
-        // }
-
         campaigns[count] = Campaign({
             creator: msg.sender,
             status: CampaignStatus.CREATED,
@@ -132,30 +122,47 @@ contract CrowdFund is Ownable {
             votes: 0,
             goals: _goals
         });
-        emit Create(count, msg.sender, total, _startAt, _endAt);
+        emit Create(msg.sender, count);
     }
 
-    function cancel(uint256 _id) external {
+    function cancel(uint256 _id) external campaignOwner(_id) {
         Campaign memory campaign = campaigns[_id];
-        require(
-            campaign.creator == msg.sender,
-            "You did not create this Campaign"
-        );
-        require(
-            block.timestamp < campaign.startAt,
-            "Campaign has already started"
-        );
+
+        require(campaign.status == CampaignStatus.CREATED, "Cannot cancel");
 
         delete campaigns[_id];
         emit Cancel(_id);
     }
 
-    function pledge(uint256 _id, uint256 _amount) external {
+    function addGoals(
+        uint256 _id,
+        NewGoal[] calldata _goals
+    ) external campaignOwner(_id) {
+        for (uint256 i = 0; i < _goals.length; i++) {
+            Goal memory goal = Goal(
+                _goals[i].id,
+                _goals[i].price,
+                GoalStatus.BLOCKED,
+                ""
+            );
+            goals[_id][i] = goal;
+        }
+        goals[_id][0].status = GoalStatus.PENDING;
+        campaigns[_id].status = CampaignStatus.LOADED;
+        campaigns[_id].goals = _goals.length;
+    }
+
+    // Donations
+
+    function pledge(
+        uint256 _id,
+        uint256 _amount
+    ) external campaignStarted(_id) {
         Campaign storage campaign = campaigns[_id];
 
         require(
             campaign.status == CampaignStatus.STARTED,
-            "Campaign hasn't started yet"
+            "You can not pledge"
         );
         campaign.pledged += _amount;
         pledgedAmount[_id][msg.sender] += _amount;
@@ -164,45 +171,12 @@ contract CrowdFund is Ownable {
         emit Pledge(_id, msg.sender, _amount);
     }
 
-    function startCampaigns() external {
-        for (uint256 i = 0; i < count; i++) {
-            if (
-                campaigns[i].votes >= minVotes &&
-                campaigns[i].status == CampaignStatus.CREATED
-            ) {
-                Campaign storage campaign = campaigns[i];
-                campaign.status = CampaignStatus.STARTED;
-                campaigns[i] = campaign;
-            }
-        }
-    }
-
-    function finishCampaigns() external {}
-
-    function pledge(uint256 _id) external payable {
-        Campaign storage campaign = campaigns[_id];
-
-        require(
-            campaign.status == CampaignStatus.STARTED,
-            "Campaign hasn't started yet"
-        );
-        // cxonvert to token
-        // campaign.pledged += _amount;
-        // pledgedAmount[_id][msg.sender] += _amount;
-        // token.transferFrom(msg.sender, address(this), _amount); // TODO: require
-
-        // emit Pledge(_id, msg.sender, _amount);
-    }
-
     function unPledge(uint256 _id) external {
         Campaign storage campaign = campaigns[_id];
+
         require(
-            block.timestamp >= campaign.startAt,
-            "Campaign has not Started yet"
-        );
-        require(
-            campaign.status == CampaignStatus.SCAM ||
-                block.timestamp >= campaign.endAt,
+            campaign.status == CampaignStatus.INVALID ||
+                campaign.status == CampaignStatus.FINISHED,
             "You can not unpledge"
         );
         require(
@@ -215,6 +189,72 @@ contract CrowdFund is Ownable {
 
         emit Unpledge(_id, msg.sender, userAmount);
     }
+
+    function getCampaigns() external view returns (Campaign[] memory) {
+        Campaign[] memory _campaigns;
+        for (uint256 i = 0; i < count; i++) {
+            _campaigns[i] = Campaign(
+                campaigns[i].creator,
+                campaigns[i].status,
+                campaigns[i].pledged,
+                campaigns[i].votes,
+                campaigns[i].startAt,
+                campaigns[i].endAt,
+                campaigns[i].goals
+            );
+        }
+        return _campaigns;
+    }
+
+    function getGoals(uint256 _id) external view returns (Goal[] memory) {
+        Goal[] memory _goals;
+        Campaign memory campaign = campaigns[_id];
+
+        for (uint256 i = 0; i < campaign.goals; i++) {
+            _goals[i] = Goal(
+                goals[_id][i].id,
+                goals[_id][i].price,
+                goals[_id][i].status,
+                goals[_id][i].proof
+            );
+        }
+        return _goals;
+    }
+
+    function startCampaigns() external {
+        for (uint256 i = 0; i < count; i++) {
+            if (
+                campaigns[i].votes >= minVotes &&
+                campaigns[i].status == CampaignStatus.LOADED
+            ) {
+                Campaign storage campaign = campaigns[i];
+                campaign.status = CampaignStatus.STARTED;
+                campaigns[i] = campaign;
+            }
+        }
+    }
+
+    function finishCampaigns() external {
+        for (uint256 i = 0; i < count; i++) {
+            if (
+                campaigns[i].votes >= minVotes &&
+                campaigns[i].status == CampaignStatus.CREATED
+            ) {
+                Campaign storage campaign = campaigns[i];
+                campaign.status = CampaignStatus.STARTED;
+                campaigns[i] = campaign;
+            }
+        }
+    }
+
+    // function pledge(uint256 _id) external payable campaignStarted(_id) {
+    // Campaign storage campaign = campaigns[_id];
+    // cxonvert to token
+    // campaign.pledged += _amount;
+    // pledgedAmount[_id][msg.sender] += _amount;
+    // token.transferFrom(msg.sender, address(this), _amount); // TODO: require
+    // emit Pledge(_id, msg.sender, _amount);
+    // }
 
     // function claim(uint256 _id, uint256[] calldata _goals) external {
     //     //TODO: remove?
@@ -248,38 +288,24 @@ contract CrowdFund is Ownable {
     //     emit Claim(_id, _goals);
     // }
 
-    function claimNextGoal(uint256 _id) external {
+    function claimGoal(
+        uint256 _id,
+        uint256 _goalId
+    ) external campaignStarted(_id) campaignOwner(_id) {
         Campaign storage campaign = campaigns[_id];
-        require(
-            campaign.creator == msg.sender,
-            "You did not create this Campaign"
-        );
-        require(block.timestamp <= campaign.endAt, "Campaign ended");
-        require(
-            campaign.status == CampaignStatus.STARTED,
-            "Campaign should be started"
-        );
-        require(goals[_id][0].status == GoalStatus.CLAIMED, "Needs attachment");
-        uint256 goalId = 0;
 
-        for (uint256 i = 0; i < campaign.goals; i++) {
-            if (goals[_id][i].status == GoalStatus.PENDING) {
-                goalId = i;
-                break;
-            }
-        }
-        if (goalId > 0) {
+        if (_goalId > 0) {
             require(
-                goals[_id][goalId].status == GoalStatus.VALID,
+                goals[_id][_goalId].status == GoalStatus.VALID,
                 "Previous item is not valid yet"
             );
-        }
+        } else {}
 
         require(
-            campaign.pledged >= goals[_id][goalId].price,
+            campaign.pledged >= goals[_id][_goalId].price,
             "Not enough money"
         );
-        campaign.pledged -= goals[_id][goalId].price;
+        campaign.pledged -= goals[_id][_goalId].price;
 
         token.transfer(campaign.creator, campaign.pledged);
 
@@ -290,17 +316,7 @@ contract CrowdFund is Ownable {
         uint256 _id,
         uint256 _goal_id,
         string calldata _goal_proof
-    ) external {
-        Campaign storage campaign = campaigns[_id];
-        require(
-            campaign.creator == msg.sender,
-            "You did not create this Campaign"
-        );
-        require(
-            campaign.status == CampaignStatus.STARTED,
-            "Campaign should be started"
-        );
-
+    ) external campaignStarted(_id) campaignOwner(_id) {
         require(
             goals[_id][_goal_id].status == GoalStatus.CLAIMED,
             "Cannot attach proof"
@@ -310,11 +326,30 @@ contract CrowdFund is Ownable {
         goals[_id][_goal_id].proof = _goal_proof;
     }
 
+    function validateProof(
+        uint256 _id,
+        uint256 _goal_id,
+        GoalStatus _status
+    ) external campaignStarted(_id) {
+        require(
+            goals[_id][_goal_id].status == GoalStatus.PROOF,
+            "Cannot validate proof"
+        );
+        require(
+            _status == GoalStatus.REVALIDATE ||
+                _status == GoalStatus.INVALID ||
+                _status == GoalStatus.VALID,
+            "Invalid state"
+        );
+
+        goals[_id][_goal_id].status = _status;
+    }
+
     function refund(uint256 _id) external {
         Campaign memory campaign = campaigns[_id];
         require(
             campaign.status == CampaignStatus.FINISHED ||
-                campaign.status == CampaignStatus.SCAM,
+                campaign.status == CampaignStatus.INVALID,
             "not ended"
         );
 
