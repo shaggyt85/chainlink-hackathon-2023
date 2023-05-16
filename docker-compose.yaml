@@ -18,21 +18,27 @@ services:
   amazon:
     container_name: amazon
     build:
-      context: ./providers/amazon
+      context: ./aggregator/providers/amazon
     networks:
       - prices
   ebay:
     container_name: ebay
     build:
-      context: ./providers/ebay
+      context: ./aggregator/providers/ebay
     networks:
       - prices
   walmart:
     container_name: walmart
     build:
-      context: ./providers/walmart
+      context: ./aggregator/providers/walmart
     networks:
       - prices
+  metadata:
+    container_name: metadata
+    build:
+      context: ./metadata
+    ports:
+      - "4000:3000"
   blockchain:
     container_name: blockchain
     build:
