@@ -7,24 +7,32 @@
 const hre = require("hardhat");
 
 async function main() {
-  const initialSupply = 800000000000000;
+  const MockERC20 = await hre.ethers.getContractFactory("MockERC20");
+  const mockERC20 = await MockERC20.deploy();
 
-  const FYSPToken = await hre.ethers.getContractFactory("FYSPToken");
-  const token = await FYSPToken.deploy(initialSupply);
+  const MockAggregator = await hre.ethers.getContractFactory("MockAggregator");
+  const mockAggregator = await MockAggregator.deploy();
 
   const minVotes = 10;
   const maxDuration = 10 * 7 * 24 * 60 * 60;
 
   const Crowdfund = await hre.ethers.getContractFactory("CrowdFund");
   const crowdfund = await Crowdfund.deploy(
-    token.address,
+    mockERC20.address,
     maxDuration,
-    minVotes
+    minVotes,
+    mockAggregator.address
   );
+  const currentPrice = await mockAggregator.latestRoundData();
 
   await crowdfund.deployed();
 
-  console.log(`Crowdfund deployed to ${crowdfund.address}`);
+  console.log(`MockERC20 deployed to ${mockERC20.address}`);
+  console.log(`MockAggregator deployed to ${mockAggregator.address}`);
+
+  console.log(
+    `Crowdfund deployed to ${crowdfund.address}. ETH price in USD: $${currentPrice[1]}`
+  );
 }
 
 // We recommend this pattern to be able to use async/await everywhere
