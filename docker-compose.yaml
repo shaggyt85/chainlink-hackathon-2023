@@ -49,6 +49,6 @@ services:
     container_name: bootstrap
     build:
       context: ./crowdfund
-    command: npx hardhat run --network docker scripts/deploy.js
+    command: npx hardhat run --network docker scripts/deploy_local.js
     depends_on:
       - blockchain

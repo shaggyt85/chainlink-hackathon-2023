@@ -15,11 +15,7 @@ interface IERC20 {
 /**
  * @title CrowdFund Smart Contract
  */
-// TODO:
-// - check ETH -> USD + stable coin when withdrawing
-// AAVE https://github.com/Okiki-Olugunna/Crowdfunding-DeFi/tree/main
-// https://github.com/aindrajaya/dapp-crowdfunding-client
-// chainlink automation -> start and finish
+
 contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
     IERC20 public immutable token;
     AggregatorV3Interface internal priceFeed;
@@ -35,14 +31,8 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
     mapping(uint256 => Campaign) public campaigns;
     mapping(uint256 => Funds) public funds;
     mapping(uint256 => mapping(uint256 => Goal)) public goals;
-    mapping(uint256 => mapping(address => uint256)) public pledgedAmount;
-
-    event Create(address indexed creator, uint256 id);
-    event Cancel(uint256 id);
-    event Pledge(uint256 indexed id, address indexed caller, uint256 amount);
-    event Unpledge(uint256 indexed id, address indexed caller, uint256 amount);
-    event Claim(uint256 id, uint256[] goals);
-    event Refund(uint256 id, address indexed caller, uint256 amount);
+    mapping(address => mapping(uint256 => bool)) public votes;
+    mapping(uint256 => mapping(address => Funds)) public pledgedAmount;
 
     constructor(
         address _token,
@@ -74,27 +64,12 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
         _;
     }
 
-    modifier canUnpledgeFromCampaign(uint256 _id) {
-        require(
-            campaigns[_id].status == CampaignStatus.INVALID ||
-                campaigns[_id].status == CampaignStatus.FINISHED,
-            "You can not unpledge"
-        );
-        _;
-    }
-
     modifier campaignOwner(uint256 _id) {
-        require(
-            campaigns[_id].creator == msg.sender,
-            "You did not create this Campaign"
-        );
+        require(campaigns[_id].creator == msg.sender, "Only campaign creator");
         _;
     }
     modifier notCampaignOwner(uint256 _id) {
-        require(
-            campaigns[_id].creator != msg.sender,
-            "You did not create this Campaign"
-        );
+        require(campaigns[_id].creator != msg.sender, "Creator can't do this");
         _;
     }
 
@@ -163,7 +138,11 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
     }
 
     // Campaings
-    function create(uint32 _goals, uint32 _startAt, uint32 _endAt) external {
+    function create(
+        uint256 _goals,
+        uint256 _startAt,
+        uint256 _endAt
+    ) external override whenNotPaused {
         require(_startAt >= block.timestamp, "Invalid start");
         require(_endAt > _startAt, "Invalid range");
         require(
@@ -180,23 +159,30 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
             votes: 0,
             goals: _goals
         });
-        emit Create(msg.sender, count);
+
+        emit CampaignCreated(count, msg.sender);
     }
 
-    function cancel(uint256 _id) external campaignOwner(_id) {
+    function cancel(
+        uint256 _id
+    ) external override campaignOwner(_id) whenNotPaused {
         require(
             campaigns[_id].status == CampaignStatus.CREATED,
             "Cannot cancel"
         );
 
         delete campaigns[_id];
-        emit Cancel(_id);
+        emit CampaignCancelled(_id, msg.sender);
     }
 
     function addGoals(
         uint256 _id,
         NewGoal[] calldata _goals
-    ) external campaignOwner(_id) campaignCreated(_id) {
+    ) external override campaignOwner(_id) campaignCreated(_id) whenNotPaused {
+        require(
+            campaigns[_id].goals == _goals.length,
+            "Invalid number of goals"
+        );
         for (uint256 i = 0; i < _goals.length; i++) {
             goals[_id][i] = Goal(
                 _goals[i].id,
@@ -206,7 +192,7 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
             );
         }
         campaigns[_id].status = CampaignStatus.LOADED;
-        campaigns[_id].goals = _goals.length;
+        emit GoalsAdded(_id, _goals);
     }
 
     // Donations
@@ -214,40 +200,66 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
     function pledge(
         uint256 _id,
         uint256 _amount
-    ) external payable campaignStarted(_id) {
+    ) external payable override campaignStarted(_id) whenNotPaused {
         require(
             campaigns[_id].status == CampaignStatus.STARTED,
             "You can not pledge"
         );
         require(msg.value > 0 || _amount > 0, "Invalids amounts");
-        funds[_id].tokens += _amount;
+
+        Funds storage _userDonation = pledgedAmount[_id][msg.sender];
         if (msg.value > 0) {
             funds[_id].eth += msg.value;
+            _userDonation.eth += msg.value;
         }
         if (_amount > 0) {
-            pledgedAmount[_id][msg.sender] += _amount;
+            funds[_id].tokens += _amount;
+            _userDonation.tokens += _amount;
         }
         require(
             token.transferFrom(msg.sender, address(this), _amount),
             "transfer failed"
         );
 
-        emit Pledge(_id, msg.sender, _amount);
+        emit Pledged(_id, msg.sender, _amount);
     }
 
-    function unpledge(uint256 _id) external canUnpledgeFromCampaign(_id) {
-        require(pledgedAmount[_id][msg.sender] > 0, "Nothing to unpledge");
-        uint256 userAmount = pledgedAmount[_id][msg.sender];
-        delete pledgedAmount[_id][msg.sender]; //TODO: check
-        require(token.transfer(msg.sender, userAmount), "transfer failed");
-
-        emit Unpledge(_id, msg.sender, userAmount);
+    function unpledge(uint256 _id) external override {
+        require(
+            campaigns[_id].status == CampaignStatus.INVALID ||
+                campaigns[_id].status == CampaignStatus.FINISHED,
+            "Can't unpledge"
+        );
+        require(
+            pledgedAmount[_id][msg.sender].eth > 0 ||
+                pledgedAmount[_id][msg.sender].tokens > 0,
+            "Nothing to unpledge"
+        );
+        if (pledgedAmount[_id][msg.sender].eth > 0) {
+            funds[_id].eth -= pledgedAmount[_id][msg.sender].eth;
+            (bool success, ) = msg.sender.call{
+                value: pledgedAmount[_id][msg.sender].eth
+            }("");
+            require(success, "Eth transfer failed.");
+        }
+        if (pledgedAmount[_id][msg.sender].tokens > 0) {
+            funds[_id].tokens -= pledgedAmount[_id][msg.sender].tokens;
+            require(
+                token.transfer(
+                    msg.sender,
+                    pledgedAmount[_id][msg.sender].tokens
+                ),
+                "transfer failed"
+            );
+        }
+        delete pledgedAmount[_id][msg.sender];
+        emit Unpledged(_id, msg.sender);
     }
 
-    function getCampaigns() external view returns (Campaign[] memory) {
-        Campaign[] memory _campaigns;
-        for (uint256 i = 0; i < count; i++) {
-            _campaigns[i] = Campaign(
+    function getCampaigns() external view override returns (Campaign[] memory) {
+        Campaign[] memory _campaigns = new Campaign[](count);
+        for (uint256 i = 1; i <= count; i++) {
+            _campaigns[i - 1] = Campaign(
                 campaigns[i].creator,
                 campaigns[i].status,
                 campaigns[i].votes,
@@ -259,8 +271,10 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
         return _campaigns;
     }
 
-    function getGoals(uint256 _id) external view returns (Goal[] memory) {
-        Goal[] memory _goals;
+    function getGoals(
+        uint256 _id
+    ) external view override returns (Goal[] memory) {
+        Goal[] memory _goals = new Goal[](campaigns[_id].goals);
         for (uint256 i = 0; i < campaigns[_id].goals; i++) {
             _goals[i] = Goal(
                 goals[_id][i].id,
@@ -278,13 +292,20 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
             block.timestamp >= campaigns[_id].startAt;
     }
 
-    function updateCampaigns() external onlyRole(UPDATER_ROLE) {
-        for (uint256 i = 0; i < count; i++) {
+    function updateCampaigns()
+        external
+        override
+        onlyRole(UPDATER_ROLE)
+        whenNotPaused
+    {
+        for (uint256 i = 1; i <= count; i++) {
             if (campaigns[i].status == CampaignStatus.LOADED) {
                 if (campaigns[i].votes >= minVotes && betweenTimeRange(i)) {
                     campaigns[i].status = CampaignStatus.STARTED;
+                    emit CampaignUpdated(i, CampaignStatus.STARTED);
                 } else if (block.timestamp > campaigns[i].endAt) {
                     campaigns[i].status = CampaignStatus.FINISHED;
+                    emit CampaignUpdated(i, CampaignStatus.FINISHED);
                 }
             } else if (campaigns[i].status == CampaignStatus.STARTED) {
                 if (betweenTimeRange(i)) {
@@ -293,16 +314,19 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
                         GoalStatus.CLAIMED
                     ) {
                         campaigns[i].status = CampaignStatus.CLAIMED;
+                        emit CampaignUpdated(i, CampaignStatus.CLAIMED);
                     } else {
                         for (uint256 j = 0; j < campaigns[i].goals; j++) {
                             if (goals[i][j].status == GoalStatus.INVALID) {
                                 campaigns[i].status = CampaignStatus.INVALID;
+                                emit CampaignUpdated(i, CampaignStatus.INVALID);
                                 break;
                             }
                         }
                     }
                 } else {
                     campaigns[i].status = CampaignStatus.FINISHED;
+                    emit CampaignUpdated(i, CampaignStatus.FINISHED);
                 }
             }
         }
@@ -311,17 +335,17 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
     function claimGoal(
         uint256 _id,
         uint256 _goalId
-    ) external campaignStarted(_id) campaignOwner(_id) {
+    ) external override campaignStarted(_id) campaignOwner(_id) whenNotPaused {
+        // require(_goalId > 0, "Invalid goal");
         if (_goalId > 0) {
             require(
                 goals[_id][_goalId - 1].status == GoalStatus.VALID,
-                "Previous goal was not validated"
+                "Previous goal wasn't validated"
             );
         }
 
         (, int price, , , ) = priceFeed.latestRoundData();
         uint256 ethToUSD = funds[_id].eth * uint(price);
-
         require(
             ethToUSD + funds[_id].tokens > goals[_id][_goalId].price,
             "Not enough money"
@@ -340,19 +364,19 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
         funds[_id].tokens -= goals[_id][_goalId].price;
         require(
             token.transfer(campaigns[_id].creator, goals[_id][_goalId].price),
-            "Token transfer failed"
+            "transfer failed"
         );
 
         goals[_id][_goalId].status = GoalStatus.CLAIMED;
 
-        // emit Claim(_id, _goals);
+        emit GoalClaimed(_id, _goalId, msg.sender);
     }
 
     function attachProof(
         uint256 _id,
         uint256 _goal_id,
         string calldata _goal_proof
-    ) external campaignStarted(_id) campaignOwner(_id) {
+    ) external override campaignStarted(_id) campaignOwner(_id) whenNotPaused {
         require(
             goals[_id][_goal_id].status == GoalStatus.CLAIMED ||
                 goals[_id][_goal_id].status == GoalStatus.REVALIDATE,
@@ -361,6 +385,7 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
 
         goals[_id][_goal_id].status = GoalStatus.PROOF_VALIDATION;
         goals[_id][_goal_id].proof = _goal_proof;
+        emit ProofAttached(_id, _goal_id, msg.sender);
     }
 
     function validateProof(
@@ -369,9 +394,11 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
         GoalStatus _status
     )
         external
+        override
         campaignStarted(_id)
         notCampaignOwner(_id)
         onlyRole(VALIDATOR_ROLE)
+        whenNotPaused
     {
         require(
             goals[_id][_goal_id].status == GoalStatus.PROOF_VALIDATION,
@@ -385,11 +412,22 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
         );
 
         goals[_id][_goal_id].status = _status;
+        emit ProofValidated(_id, _goal_id, _status);
     }
 
     function voteCampaign(
         uint256 _id
-    ) external campaignCreated(_id) notCampaignOwner(_id) onlyRole(VOTER_ROLE) {
+    )
+        external
+        override
+        campaignCreated(_id)
+        notCampaignOwner(_id)
+        onlyRole(VOTER_ROLE)
+        whenNotPaused
+    {
+        require(votes[msg.sender][_id] == false, "Already voted");
+        votes[msg.sender][_id] = true;
         campaigns[_id].votes++;
+        emit CampaignVoted(_id, msg.sender);
     }
 }
