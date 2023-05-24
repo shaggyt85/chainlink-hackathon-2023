@@ -1,13 +1,24 @@
 require("@nomicfoundation/hardhat-toolbox");
 
-/** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  solidity: "0.8.18",
+  solidity: {
+    version: "0.8.18",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 10_000_000,
+      },
+    },
+  },
   allowUnlimitedContractSize: true,
   networks: {
     docker: {
       chainId: 31337,
       url: "http://blockchain:8545",
+    },
+    goerli: {
+      chainId: 5,
+      url: "https://rpc.ankr.com/eth_goerli",
     },
   },
 };
