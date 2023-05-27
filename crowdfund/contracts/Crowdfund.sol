@@ -26,7 +26,6 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
 
     bytes32 public constant VOTER_ROLE = keccak256("VOTER_ROLE");
     bytes32 public constant VALIDATOR_ROLE = keccak256("VALIDATOR_ROLE");
-    bytes32 public constant UPDATER_ROLE = keccak256("UPDATER_ROLE");
 
     mapping(uint256 => Campaign) public campaigns;
     mapping(uint256 => Funds) public funds;
@@ -103,22 +102,6 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
      */
     function revokeVoterRole(address _address) external onlyOwner {
         _revokeRole(VOTER_ROLE, _address);
-    }
-
-    /**
-     * @dev grants updater role
-     * @param _address the address to update roles
-     */
-    function grantUpdaterRole(address _address) external onlyOwner {
-        _grantRole(UPDATER_ROLE, _address);
-    }
-
-    /**
-     * @dev revokes updater role
-     * @param _address the address to update roles
-     */
-    function revokeUpdaterRole(address _address) external onlyOwner {
-        _revokeRole(UPDATER_ROLE, _address);
     }
 
     /**
@@ -292,12 +275,7 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
             block.timestamp >= campaigns[_id].startAt;
     }
 
-    function updateCampaigns()
-        external
-        override
-        onlyRole(UPDATER_ROLE)
-        whenNotPaused
-    {
+    function updateCampaigns() external override whenNotPaused {
         for (uint256 i = 1; i <= count; i++) {
             if (campaigns[i].status == CampaignStatus.LOADED) {
                 if (campaigns[i].votes >= minVotes && betweenTimeRange(i)) {

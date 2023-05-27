@@ -12,7 +12,7 @@ const {
 
 describe("Goal", async () => {
   it("can claim the goal", async () => {
-    const { crowdfund, voter, updater, user } = await loadFixture(
+    const { crowdfund, voter, user } = await loadFixture(
       getCrowdfundContractAndAccounts
     );
     const { startAt, endAt } = await getStartAndFinish((deltaStart = 10));
@@ -35,7 +35,7 @@ describe("Goal", async () => {
     // Start the campaign
     await time.increase(30);
 
-    await expect(crowdfund.connect(updater).updateCampaigns()).to.emit(
+    await expect(crowdfund.updateCampaigns()).to.emit(
       crowdfund,
       "CampaignUpdated"
     );
@@ -49,7 +49,7 @@ describe("Goal", async () => {
     await expect(crowdfund.claimGoal(1, 0)).to.emit(crowdfund, "GoalClaimed");
   });
   it("can attach proof and validate proof", async () => {
-    const { crowdfund, voter, updater, user, validator } = await loadFixture(
+    const { crowdfund, voter, user, validator } = await loadFixture(
       getCrowdfundContractAndAccounts
     );
     const { startAt, endAt } = await getStartAndFinish((deltaStart = 10));
@@ -72,7 +72,7 @@ describe("Goal", async () => {
     // Start the campaign
     await time.increase(30);
 
-    await expect(crowdfund.connect(updater).updateCampaigns()).to.emit(
+    await expect(crowdfund.updateCampaigns()).to.emit(
       crowdfund,
       "CampaignUpdated"
     );
@@ -105,7 +105,7 @@ describe("Goal", async () => {
   });
 
   it("cannot claim the goal", async () => {
-    const { crowdfund, voter, updater, user } = await loadFixture(
+    const { crowdfund, voter, user } = await loadFixture(
       getCrowdfundContractAndAccounts
     );
     const { startAt, endAt } = await getStartAndFinish((deltaStart = 10));
@@ -128,7 +128,7 @@ describe("Goal", async () => {
     // Start the campaign
     await time.increase(30);
 
-    await expect(crowdfund.connect(updater).updateCampaigns()).to.emit(
+    await expect(crowdfund.updateCampaigns()).to.emit(
       crowdfund,
       "CampaignUpdated"
     );

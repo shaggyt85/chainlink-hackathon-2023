@@ -8,16 +8,13 @@ const { getCrowdfundContractAndAccounts } = require("./utils");
 
 describe("Roles", () => {
   it("should grant and revoke roles correctly", async () => {
-    const { crowdfund, updater, voter, validator } = await loadFixture(
+    const { crowdfund, voter, validator } = await loadFixture(
       getCrowdfundContractAndAccounts
     );
 
     // Check initial roles
     expect(await crowdfund.hasRole(await crowdfund.VOTER_ROLE(), voter.address))
       .to.be.true;
-    expect(
-      await crowdfund.hasRole(await crowdfund.UPDATER_ROLE(), updater.address)
-    ).to.be.true;
     expect(
       await crowdfund.hasRole(
         await crowdfund.VALIDATOR_ROLE(),
@@ -27,15 +24,11 @@ describe("Roles", () => {
 
     // Revoke roles
     await crowdfund.revokeVoterRole(voter.address);
-    await crowdfund.revokeUpdaterRole(updater.address);
     await crowdfund.revokeValidatorRole(validator.address);
 
     // Check if roles are revoked
     expect(await crowdfund.hasRole(await crowdfund.VOTER_ROLE(), voter.address))
       .to.be.false;
-    expect(
-      await crowdfund.hasRole(await crowdfund.UPDATER_ROLE(), updater.address)
-    ).to.be.false;
     expect(
       await crowdfund.hasRole(
         await crowdfund.VALIDATOR_ROLE(),
@@ -45,15 +38,11 @@ describe("Roles", () => {
 
     // Grant roles again
     await crowdfund.grantVoterRole(voter.address);
-    await crowdfund.grantUpdaterRole(updater.address);
     await crowdfund.grantValidatorRole(validator.address);
 
     // Check if roles are granted again
     expect(await crowdfund.hasRole(await crowdfund.VOTER_ROLE(), voter.address))
       .to.be.true;
-    expect(
-      await crowdfund.hasRole(await crowdfund.UPDATER_ROLE(), updater.address)
-    ).to.be.true;
     expect(
       await crowdfund.hasRole(
         await crowdfund.VALIDATOR_ROLE(),

@@ -12,7 +12,7 @@ const {
 
 describe("Donation", async () => {
   it("should allow users to pledge to a campaign", async () => {
-    const { crowdfund, voter, updater, user } = await loadFixture(
+    const { crowdfund, voter, user } = await loadFixture(
       getCrowdfundContractAndAccounts
     );
     const { startAt, endAt } = await getStartAndFinish((deltaStart = 10));
@@ -35,7 +35,7 @@ describe("Donation", async () => {
     // Start the campaign
     await time.increase(30);
 
-    await expect(crowdfund.connect(updater).updateCampaigns()).to.emit(
+    await expect(crowdfund.updateCampaigns()).to.emit(
       crowdfund,
       "CampaignUpdated"
     );
@@ -79,7 +79,7 @@ describe("Donation", async () => {
     // Start the campaign
     await time.increase(30);
 
-    await expect(crowdfund.connect(updater).updateCampaigns()).to.emit(
+    await expect(crowdfund.updateCampaigns()).to.emit(
       crowdfund,
       "CampaignUpdated"
     );
@@ -93,7 +93,7 @@ describe("Donation", async () => {
 
     await time.increase(deltaEnd);
 
-    await expect(crowdfund.connect(updater).updateCampaigns()).to.emit(
+    await expect(crowdfund.updateCampaigns()).to.emit(
       crowdfund,
       "CampaignUpdated"
     );
