@@ -31,7 +31,7 @@ async function getCrowdfundContractAndAccounts() {
   await crowdfund.deployed();
 
   // Get signers
-  [owner, updater, voter, validator, user] = await ethers.getSigners();
+  [owner, voter, validator, user] = await ethers.getSigners();
 
   // Transfer tokens and increase allowance
   const amount = ethers.utils.parseUnits("1000", TOKEN_DECIMALS);
@@ -39,11 +39,10 @@ async function getCrowdfundContractAndAccounts() {
   await mockERC20.connect(user).increaseAllowance(crowdfund.address, amount);
 
   // Assign roles to the respective signers
-  await crowdfund.grantUpdaterRole(updater.address);
   await crowdfund.grantVoterRole(voter.address);
   await crowdfund.grantValidatorRole(validator.address);
 
-  return { crowdfund, owner, updater, voter, validator, user };
+  return { crowdfund, owner, voter, validator, user };
 }
 
 module.exports = {

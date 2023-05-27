@@ -41,7 +41,7 @@ describe("Gets", async () => {
     // Start the campaign
     await time.increase(30);
 
-    await expect(crowdfund.connect(updater).updateCampaigns()).to.emit(
+    await expect(crowdfund.updateCampaigns()).to.emit(
       crowdfund,
       "CampaignUpdated"
     );
@@ -83,7 +83,7 @@ describe("Gets", async () => {
     // Start the campaign
     await time.increase(30);
 
-    await expect(crowdfund.connect(updater).updateCampaigns()).to.emit(
+    await expect(crowdfund.updateCampaigns()).to.emit(
       crowdfund,
       "CampaignUpdated"
     );
