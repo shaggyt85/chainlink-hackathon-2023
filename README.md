@@ -6,6 +6,16 @@ TODO
 
 ## Testnet
 
+Currenly we're using Goerli testnet:
+
+- MockERC20 deployed to 0xa12450d42dcb0c64fE5d6c59D01eA19e6213B2e6
+- Crowdfund deployed to 0xA2E281aE8E4c56e7AE328086D0B8D4E2bE3fa5D0
+- Chainlink automation https://automation.chain.link/goerli/40014270112186586710872972971551308496725179069292283278035680608805269185661
+
+### Verification
+
+´´´npx hardhat verify --network goerli --contract contracts/Crowdfund.sol:CrowdFund 0xA2E281aE8E4c56e7AE328086D0B8D4E2bE3fa5D0 0xa12450d42dcb0c64fE5d6c59D01eA19e6213B2e6 6048000 1 0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e´´´
+
 ## Local
 
 ### Requirements
