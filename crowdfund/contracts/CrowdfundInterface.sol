@@ -84,8 +84,6 @@ interface CrowdfundInterface {
 
     function getGoals(uint256 _id) external view returns (Goal[] memory);
 
-    function updateCampaigns() external;
-
     function claimGoal(uint256 _id, uint256 _goal_id) external;
 
     function attachProof(

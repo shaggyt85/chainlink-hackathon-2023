@@ -473,13 +473,6 @@
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "updateCampaigns",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "uint256",

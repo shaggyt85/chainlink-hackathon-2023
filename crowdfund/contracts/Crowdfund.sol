@@ -275,7 +275,7 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
             block.timestamp >= campaigns[_id].startAt;
     }
 
-    function updateCampaigns() external override whenNotPaused {
+    function updateCampaigns() public whenNotPaused {
         for (uint256 i = 1; i <= count; i++) {
             if (campaigns[i].status == CampaignStatus.LOADED) {
                 if (campaigns[i].votes >= minVotes && betweenTimeRange(i)) {
