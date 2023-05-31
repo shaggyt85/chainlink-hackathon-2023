@@ -236,3 +236,19 @@ It will run in the local blockchain in the container called `blockchain`. It sho
 #### Metadata
 
 This service will save the metadata for the campaign (name, description, etc). To create a new entry send a POST to `localhost:4000/campaigns`, a GET to `localhost:4000/campaigns` to get all the campaigns or `localhost:4000/campaigns/<id>` to get just one campaign. The body in the post can be any body because it's a mock API.
+
+## Contributing
+
+Thank you for considering contributing to the CrowdFund project! Contributions are highly encouraged and welcome. Here are a few ways you can contribute:
+
+- Report issues: Help identify and report any bugs or issues you encounter while using the platform by opening an issue in the repository.
+
+- Suggest improvements: If you have ideas for improving the project, feel free to open an issue and share your suggestions.
+
+- Submit pull requests: If you'd like to contribute code changes or enhancements to the project, you can submit a pull request. Make sure to follow the project's guidelines and coding conventions.
+
+Before contributing, please review the [contribution guidelines](CONTRIBUTING.md) for this project.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
