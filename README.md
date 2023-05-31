@@ -1,5 +1,7 @@
 # Fund your social project
 
+[![Contract workflow](https://github.com/FundYourSocialProject/chainlink-hackathon-2023/actions/workflows/contract.yaml/badge.svg?branch=main)](https://github.com/FundYourSocialProject/chainlink-hackathon-2023/actions/workflows/contract.yaml)
+
 This is a smart contract written for the Chainlink Hackathon 2023. It implements a crowdfunding platform that allows users to create and participate in fundraising campaigns. The smart contract leverages the Chainlink ecosystem by using the Chainlink Price Feed contract for price conversions.
 
 ## Project Description
