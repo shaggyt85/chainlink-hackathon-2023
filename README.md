@@ -124,7 +124,7 @@ The user interacts with the contract by using a front-end. Optionally, they can 
 
 The CrowdFund smart contract allows users to create crowdfunding campaigns, pledge funds or tokens to campaigns, vote for campaigns, add campaign goals, and claim goals based on the campaign's success. The contract includes role-based access control and pause functionality to ensure secure and controlled operations. All the metadata related to the campaign is saved in a different service called "metadata API".
 
-Finally, the solution uses ChainLink data price feeds to convert the eth price to usd when the creator wants to claim a goal and also the Chainlink Automation to execute the contract off-chain and update the campaign status.
+Finally, the solution uses ChainLink data price feeds to convert the Ether price to usd when the creator wants to claim a goal and also the Chainlink Automation to execute the contract off-chain and update the campaign status.
 
 ### Methods
 
@@ -176,7 +176,11 @@ The CrowdFund smart contract has the following dependencies:
 - OpenZeppelin Contracts: Provides base contracts for Ownable, Pausable, and AccessControl functionalities.
 - Chainlink Contracts: Provides the AggregatorV3Interface for price feed data.
 
-## Testnet deployment
+## Production
+
+The solution isn't placed in Ethereum mainnet.
+
+## Testnet
 
 Currenly we're using Goerli testnet:
 
