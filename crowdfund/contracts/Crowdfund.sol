@@ -135,6 +135,7 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
 
         count += 1;
         campaigns[count] = Campaign({
+            id: count,
             creator: msg.sender,
             status: CampaignStatus.CREATED,
             startAt: _startAt,
@@ -243,6 +244,7 @@ contract CrowdFund is Ownable, Pausable, AccessControl, CrowdfundInterface {
         Campaign[] memory _campaigns = new Campaign[](count);
         for (uint256 i = 1; i <= count; i++) {
             _campaigns[i - 1] = Campaign(
+                i,
                 campaigns[i].creator,
                 campaigns[i].status,
                 campaigns[i].votes,
