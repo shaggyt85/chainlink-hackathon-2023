@@ -186,13 +186,13 @@ The solution isn't placed in Ethereum mainnet.
 
 Currenly we're using Goerli testnet:
 
-- MockERC20 deployed to 0x7c1516C7Fe8EF4d67297BcC4433c7eBAf16779C3
-- Crowdfund deployed to 0x8449DDDc934663210FBdD4e4E32FdbBC8E7385f5
+- MockERC20 deployed to 0x7291ECdED4d4B123aceAFf60dc34455969dC7345
+- Crowdfund deployed to 0x51e1564a5d90Fd8c1C8Fc525A7b960D46a181D7A
 - Chainlink automation https://automation.chain.link/goerli/40014270112186586710872972971551308496725179069292283278035680608805269185661
 
 ### Verification
 
-`npx hardhat verify --network goerli --contract contracts/Crowdfund.sol:CrowdFund 0x8449DDDc934663210FBdD4e4E32FdbBC8E7385f5 0x7c1516C7Fe8EF4d67297BcC4433c7eBAf16779C3 6048000 1 0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e`
+`npx hardhat verify --network goerli --contract contracts/Crowdfund.sol:CrowdFund 0x51e1564a5d90Fd8c1C8Fc525A7b960D46a181D7A 0x7291ECdED4d4B123aceAFf60dc34455969dC7345 6048000 1 0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e`
 
 ## Local usage
 
