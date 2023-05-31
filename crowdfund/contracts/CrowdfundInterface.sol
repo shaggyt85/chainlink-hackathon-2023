@@ -26,6 +26,7 @@ interface CrowdfundInterface {
     }
 
     struct Campaign {
+        uint256 id;
         address creator;
         CampaignStatus status;
         uint256 startAt;

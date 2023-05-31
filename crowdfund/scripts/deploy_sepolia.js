@@ -25,7 +25,7 @@ async function main() {
 
   console.log(`MockERC20 deployed to ${mockERC20.address}`);
 
-  console.log(`Crowdfund deployed to ${crowdfund.address}.`);
+  console.log(`Crowdfund deployed to ${crowdfund.address}`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
