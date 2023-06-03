@@ -40,4 +40,4 @@ When participating in this project, please abide by the Code of Conduct. Be resp
 
 ## License
 
-The project is licensed under the [LICENSE](LICENSE) terms.
+The project is licensed under the [LICENSE](LICENSE.md) terms.
