@@ -253,4 +253,4 @@ Before contributing, please review the [contribution guidelines](CONTRIBUTING.md
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [MIT License](LICENSE.md).
